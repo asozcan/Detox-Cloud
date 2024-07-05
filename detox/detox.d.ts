@@ -33,6 +33,7 @@ declare global {
             logger?: DetoxLoggerConfig;
             session?: DetoxSessionConfig;
             testRunner?: DetoxTestRunnerConfig;
+            cloudAuthentication?: DetoxCloudAuthConfig;
         };
 
         interface DetoxArtifactsConfig {
@@ -130,6 +131,14 @@ declare global {
             debugSynchronization?: number;
             server?: string;
             sessionId?: string;
+            build?: string;
+            project?: string;
+            name?: string;
+        }
+
+        interface DetoxCloudAuthConfig {
+            username?: string;
+            accessKey?: string;
         }
 
         interface DetoxTestRunnerConfig {

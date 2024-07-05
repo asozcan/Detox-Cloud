@@ -251,6 +251,22 @@ class Client {
     await this.sendAction(new actions.SetInstrumentsRecordingState());
   }
 
+  async waitForCloudPlatform(params) {
+    try {
+      const response = await this.sendAction(new actions.CloudPlatform(params));
+      if (params['method'] == 'terminateApp') {
+        await this.waitUntilDisconnected();
+      }
+      // else if (params['method'] == 'launchApp') {
+      //   this._onAppConnected();
+      // }
+      return response;
+    } catch (err) {
+      this._successfulTestRun = false;
+      throw err;
+    }
+  }
+
   async deliverPayload(params) {
     await this.sendAction(new actions.DeliverPayload(params));
   }

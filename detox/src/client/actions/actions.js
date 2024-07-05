@@ -41,7 +41,7 @@ class Login extends Action {
   }
 
   get timeout() {
-    return 1000;
+    return 240000;
   }
 
   async handle(response) {
@@ -176,6 +176,25 @@ class Cleanup extends Action {
 
   async handle(response) {
     this.expectResponseOfType(response, 'cleanupDone');
+  }
+}
+
+class CloudPlatform extends Action {
+  constructor(params) {
+    super('CloudPlatform', params);
+  }
+
+  get isAtomic() {
+    return true;
+  }
+
+  get timeout() {
+    return 90000;
+  }
+
+  async handle(response) {
+    this.expectResponseOfType(response, 'CloudPlatform');
+    return response;
   }
 }
 
@@ -336,4 +355,5 @@ module.exports = {
   SetOrientation,
   SetInstrumentsRecordingState,
   CaptureViewHierarchy,
+  CloudPlatform
 };

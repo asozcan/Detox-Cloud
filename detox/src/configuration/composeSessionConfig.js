@@ -1,4 +1,7 @@
+const _ = require('lodash');
+
 const isValidWebsocketURL = require('../utils/isValidWebsocketURL');
+const log = require('../utils/logger').child({ cat: 'config' });
 
 /**
  * @param {{
@@ -6,10 +9,12 @@ const isValidWebsocketURL = require('../utils/isValidWebsocketURL');
  *  globalConfig: Detox.DetoxConfig;
  *  localConfig: Detox.DetoxConfiguration;
  *  errorComposer: import('../errors/DetoxConfigErrorComposer');
+ *  isCloudSession: Boolean
  * }} options
  */
 async function composeSessionConfig(options) {
-  const { errorComposer, cliConfig, globalConfig, localConfig } = options;
+  const { errorComposer, cliConfig, globalConfig, localConfig, isCloudSession } = options;
+  const cloudSupportedCaps = ['server', 'name', 'project', 'build'];
 
   const session = {
     ...globalConfig.session,
@@ -21,6 +26,8 @@ async function composeSessionConfig(options) {
     if (typeof value !== 'string' || !isValidWebsocketURL(value)) {
       throw errorComposer.invalidServerProperty();
     }
+  } else if (isCloudSession) {
+    throw errorComposer.invalidSessionProperty('server');
   }
 
   if (session.sessionId != null) {
@@ -39,6 +46,30 @@ async function composeSessionConfig(options) {
 
   if (Number.parseInt(cliConfig.debugSynchronization, 10) >= 0) {
     session.debugSynchronization = +cliConfig.debugSynchronization;
+  }
+
+  if (isCloudSession) {
+    if (session.build != null) {
+      const value = session.build;
+      if (typeof value !== 'string') {
+        throw errorComposer.invalidCloudSessionProperty('build');
+      }
+    }
+    if (session.project != null) {
+      const value = session.project;
+      if (typeof value !== 'string') {
+        throw errorComposer.invalidCloudSessionProperty('project');
+      }
+    }
+    if (session.name != null) {
+      const value = session.name;
+      if (typeof value !== 'string') {
+        throw errorComposer.invalidCloudSessionProperty('name');
+      }
+    }
+    const ignoredCloudConfigParams = _.difference(Object.keys(session), cloudSupportedCaps);
+    if (ignoredCloudConfigParams.length > 0)
+      log.warn(`[SessionConfig] The properties ${ignoredCloudConfigParams.join(', ')} are not honoured for device type 'android.cloud'.`);
   }
 
   const result = {

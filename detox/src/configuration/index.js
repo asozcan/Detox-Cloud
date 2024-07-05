@@ -1,6 +1,7 @@
 // @ts-nocheck
 const _ = require('lodash');
 
+const package_json = require('../../package.json');
 const DetoxConfigErrorComposer = require('../errors/DetoxConfigErrorComposer');
 
 const collectCliConfig = require('./collectCliConfig');
@@ -13,6 +14,7 @@ const composeRunnerConfig = require('./composeRunnerConfig');
 const composeSessionConfig = require('./composeSessionConfig');
 const loadExternalConfig = require('./loadExternalConfig');
 const selectConfiguration = require('./selectConfiguration');
+const validateCloudAuthConfig = require('./validateCloudAuthConfig');
 
 async function composeDetoxConfig({
   cwd = process.cwd(),
@@ -69,6 +71,8 @@ async function composeDetoxConfig({
     cliConfig,
   });
 
+  const isCloudSession = deviceConfig.type === 'android.cloud';
+
   const appsConfig = composeAppsConfig({
     errorComposer,
     configurationName,
@@ -76,6 +80,7 @@ async function composeDetoxConfig({
     globalConfig,
     localConfig,
     cliConfig,
+    isCloudSession
   });
 
   const artifactsConfig = composeArtifactsConfig({
@@ -83,12 +88,14 @@ async function composeDetoxConfig({
     globalConfig,
     localConfig,
     cliConfig,
+    isCloudSession
   });
 
   const behaviorConfig = composeBehaviorConfig({
     globalConfig,
     localConfig,
     cliConfig,
+    isCloudSession
   });
 
   const loggerConfig = composeLoggerConfig({
@@ -102,7 +109,33 @@ async function composeDetoxConfig({
     globalConfig,
     localConfig,
     cliConfig,
+    isCloudSession
   });
+
+  const cloudAuthenticationConfig = await validateCloudAuthConfig({
+    errorComposer,
+    localConfig,
+    isCloudSession
+  });
+
+  if (isCloudSession) {
+    const query_param = {
+      'device': _.get(deviceConfig, 'device.name'),
+      'osVersion': _.get(deviceConfig, 'device.osVersion'),
+      'name': _.get(sessionConfig, 'name'),
+      'project': _.get(sessionConfig, 'project'),
+      'build': _.get(sessionConfig, 'build'),
+      'clientDetoxVersion': package_json.version,
+      'app': _.get(appsConfig, 'default.app'),
+      'appClient': _.get(appsConfig, 'default.appClient'),
+      'username': _.get(cloudAuthenticationConfig, 'username'),
+      'accessKey': _.get(cloudAuthenticationConfig, 'accessKey'),
+      'networkLogs': _.get(artifactsConfig, 'plugins.networkLogs.enabled'),
+      'deviceLogs': _.get(artifactsConfig, 'plugins.deviceLogs.enabled'),
+      'video': _.get(artifactsConfig, 'plugins.video.enabled')
+    };
+    sessionConfig.server += `?caps=${encodeURIComponent(JSON.stringify(query_param))}`;
+  }
 
   const result = {
     configurationName,
@@ -115,6 +148,7 @@ async function composeDetoxConfig({
     logger: loggerConfig,
     testRunner: runnerConfig,
     session: sessionConfig,
+    cloudAuthenticationConfig
   };
 
   Object.defineProperty(result, 'errorComposer', {
